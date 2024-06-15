@@ -97,6 +97,52 @@ pub struct Args {
     pub undefine: Vec<ArgumentName>,
     /// Whether to read input from a file.
     pub files: Vec<PathBuf>,
+
+    // TODO(gnu): implement these GNU extensions to support autoconf:
+
+    /// Freeze state into a file.
+    #[arg(short = 'F', long)]
+    pub freeze_state: Option<PathBuf>,
+    /// Reload a frozen state from a file.
+    #[arg(short = 'R', long)]
+    pub reload_state: Option<PathBuf>,
+    /// Change nesting limit. 0 for unlimited.
+    /// TODO: perhaps provide a default value here?
+    #[arg(short = 'L', long)]
+    pub nesting_limit: Option<usize>,
+    /// Override `--traditional` to re-enable GNU extensions
+    #[arg(short = 'g', long, default_value_t = default_gnu())]
+    pub gnu: bool,
+    /// Suppress all GNU extensions.
+    #[arg(short = 'G', long, default_value_t = default_traditional())]
+    pub traditional: bool,
+    // Append DIRECTORY to include path.
+    #[arg(short = 'I', long)]
+    pub include: Option<PathBuf>,
+    /// Set debug level (no FLAGS implies `aeq')
+    /// TODO: proper arg parser for this
+    #[arg(short = 'd', long, default_value = "aeq")]
+    pub debug: Option<String>,
+    /// Redirect debug and trace output to FILE
+    /// (default stderr, discard if empty string).
+    #[arg(long)]
+    pub debugfile: Option<PathBuf>,
+    /// once: warnings become errors, twice: stop
+    /// execution at first error.
+    #[arg(short = 'E', long)]
+    pub fatal_warning: bool,
+    /// Trace specified macro name when it is defined.
+    /// TODO: should be MacroName probably
+    #[arg(short = 't', long)]
+    pub trace: Vec<String>,
+}
+
+fn default_gnu() -> bool {
+    false
+}
+
+fn default_traditional() -> bool {
+    true
 }
 
 impl Default for Args {
@@ -106,6 +152,16 @@ impl Default for Args {
             define: Vec::default(),
             undefine: Vec::default(),
             files: Vec::default(),
+            freeze_state: None,
+            reload_state: None,
+            nesting_limit: None,
+            gnu: default_gnu(),
+            traditional: default_traditional(),
+            include: None,
+            debug: None,
+            debugfile: None,
+            fatal_warning: false,
+            trace: Vec::default(),
         }
     }
 }
@@ -115,6 +171,7 @@ pub fn run<STDOUT: Write, STDERR: Write>(
     stderr: &mut STDERR,
     args: Args,
 ) -> crate::error::Result<()> {
+    // TODO(gnu): support multiple files properly
     let result = if let Some(file_path) = args.files.into_iter().next() {
         lexer::process_streaming(
             State::default(),
